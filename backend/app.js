@@ -46,7 +46,7 @@ app.use(middleware.unknownEndpoint);
 app.use(middleware.errorHandler);
 
 app.get("/version", (req, res) => {
-  res.send("1");
+  res.send("1.0.0");
 });
 
 module.exports = app;
