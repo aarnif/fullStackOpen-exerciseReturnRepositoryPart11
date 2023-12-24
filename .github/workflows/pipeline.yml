@@ -1,0 +1,67 @@
+name: Deployment pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+
+jobs:
+  deployment_pipeline:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+      - name: Install dependencies
+        run: npm install
+      - name: Check style
+        run: npm run lint
+      - name: Make build
+        run: npm run build
+      - name: Run tests
+        run: npm run test
+        env:
+          NODE_ENV: test
+          TEST_MONGODB_URI: ${{ secrets.TEST_MONGODB_URI }}
+          PORT: ${{ secrets.PORT }}
+          SECRET: ${{ secrets.SECRET }}
+      - name: e2e tests
+        env:
+          NODE_ENV: test
+          TEST_MONGODB_URI: ${{ secrets.TEST_MONGODB_URI }}
+          PORT: ${{ secrets.PORT }}
+          SECRET: ${{ secrets.SECRET }}
+        uses: cypress-io/github-action@v5
+        with:
+          command: npm run test:e2e
+          start: npm run start:test
+          wait-on: http://localhost:3003
+  deploy:
+    needs: [deployment_pipeline]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+      - name: Trigger deployment
+        if: ${{ github.event_name == 'push' && contains(join(github.event.commits.*.message, ', '), '#skip') == false }}
+        run: curl https://api.render.com/deploy/srv-${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_API_KEY }}
+  tag_release:
+    needs: [deploy]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+      - name: Bump version and push tag
+        if: ${{ github.event_name == 'push' && contains(join(github.event.commits.*.message, ', '), '#skip') == false}}
+        uses: anothrNick/github-tag-action@1.64.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BUMP: patch
