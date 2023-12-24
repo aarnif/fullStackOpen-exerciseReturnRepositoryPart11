@@ -10,6 +10,7 @@ require("express-async-errors");
 const blogsRouter = require("./controllers/blogs");
 const usersRouter = require("./controllers/users");
 const loginRouter = require("./controllers/login");
+const checksRouter = require("./controllers/checks");
 
 const middleware = require("./utils/middleware");
 
@@ -34,6 +35,7 @@ app.use(express.json());
 app.use("/api/blogs", blogsRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/login", loginRouter);
+app.use("/api/checks", checksRouter);
 
 if (process.env.NODE_ENV === "test") {
   console.log("Use testing route");
